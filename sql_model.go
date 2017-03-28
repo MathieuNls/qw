@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"strconv"
 
+	"strings"
+
 	_ "github.com/go-sql-driver/mysql"
 )
 
@@ -92,7 +94,7 @@ type SQLModel struct {
 	 * Alternatively, you can do it on a per-instance basis using the
 	 * 'as_array()' and 'as_object()' methods.
 	 */
-	returnType string
+	returnType interface{}
 
 	/**
 	 * Holds the return type temporarily when using the
@@ -115,9 +117,25 @@ type SQLModel struct {
 	db *sql.DB
 
 	//return struct holder
-	result interface{}
+	result []interface{}
 
-	mapping map[string]string
+	lastQuery string
+
+	limit int
+
+	offset int
+
+	pendingWheres []string
+
+	pendingJoins []string
+
+	pendingUnions []string
+
+	pendingGroupBy []string
+
+	pendingHaving []string
+
+	pendingOrderBy []string
 }
 
 func NewSQLModel(table string, dbCons []string) (*SQLModel, error) {
@@ -131,7 +149,15 @@ func NewSQLModel(table string, dbCons []string) (*SQLModel, error) {
 	model.setModified = false
 	model.softDeletes = false
 	model.dateFormat = "datetime"
-	model.mapping = make(map[string]string)
+	model.pendingSelects = []string{}
+	model.pendingWheres = []string{}
+	model.pendingJoins = []string{}
+	model.pendingUnions = []string{}
+	model.pendingGroupBy = []string{}
+	model.pendingOrderBy = []string{}
+	model.lastQuery = ""
+	model.limit = -1
+	model.offset = -1
 
 	var err error
 
@@ -162,55 +188,126 @@ func NewSQLModel(table string, dbCons []string) (*SQLModel, error) {
 
 }
 
-func (model SQLModel) reflectResult(values []sql.RawBytes, columns []string) interface{} {
+func (model *SQLModel) cleanup(err error) {
+	model.pendingSelects = []string{}
+	model.pendingWheres = []string{}
+	model.pendingJoins = []string{}
+	model.pendingUnions = []string{}
+	model.pendingGroupBy = []string{}
+	model.pendingOrderBy = []string{}
+	model.limit = -1
+	model.offset = -1
+	model.lastError = err
+}
+
+// Adapt []sql.RawBytes to the model.result struct using `db` Tag
+func (model *SQLModel) reflectResult(values []sql.RawBytes, columns []string) interface{} {
 
 	colMap := make(map[string]int)
 
+	//Index the columns by name for O(1) access
 	for index := 0; index < len(columns); index++ {
 		colMap[columns[index]] = index
 	}
 
-	s := reflect.ValueOf(model.result).Elem()
+	//Reflect on model.returnType for reading/writing on fields
+	reflected := reflect.New(reflect.TypeOf(model.returnType).Elem()).Elem()
+	typeOfT := reflected.Type()
 
-	for k, v := range model.mapping {
+	//For each field in the model.result
+	for i := 0; i < reflected.NumField(); i++ {
 
-		fmt.Println("Reflecting " + k)
+		dbKey, _ := typeOfT.Field(i).Tag.Lookup("db")
 
-		typeOfKey := s.FieldByName(k).Type()
-		value := values[colMap[v]]
+		//Check if that tag is present in the resultset
+		if valKey, ok := colMap[dbKey]; ok {
 
-		switch typeOfKey.String() {
-		case "int":
-			fmt.Println("Reflecting " + v + " into " + k + ": " + string(value))
-			intValue, _ := strconv.ParseInt(string(value), 10, 64)
-			s.FieldByName(k).SetInt(intValue)
-			break
-		case "string":
-			fmt.Println("Reflecting " + v + " into " + k + ": " + string(value))
-			s.FieldByName(k).SetString(string(value))
-			break
+			//Get the value from the resultset
+			value := values[valKey]
+
+			//Swith on target type for byte to type convertion
+			typeOfKey := reflected.Field(i).Type()
+			switch typeOfKey.String() {
+			case "int":
+				intValue, _ := strconv.ParseInt(string(value), 10, 64)
+				reflected.Field(i).SetInt(intValue)
+				break
+			case "string":
+				reflected.Field(i).SetString(string(value))
+				break
+			case "float":
+				floatValue, _ := strconv.ParseFloat(string(value), 32)
+				reflected.Field(i).SetFloat(floatValue)
+				break
+			}
 		}
-
 	}
 
-	return model.result
+	return reflected.Interface()
 }
 
-func (model SQLModel) Find(id int) (interface{}, error) {
+func (model *SQLModel) composeSelectString() string {
+	selectString := "SELECT "
 
-	stmtOut, err := model.db.Prepare(
-		"SELECT " + "*" +
-			" FROM " + model.tableName +
-			" WHERE " + model.key + " = ? LIMIT 1")
+	if len(model.pendingSelects) > 0 {
+		selectString += strings.Join(model.pendingSelects, ", ")
+	} else {
+		selectString += " * "
+	}
+
+	selectString += " FROM " + model.tableName
+
+	if len(model.pendingJoins) > 0 {
+		selectString += " JOIN " + strings.Join(model.pendingJoins, ", ")
+	}
+
+	if len(model.pendingWheres) > 0 {
+		selectString += " WHERE " + strings.Join(model.pendingWheres, " ")
+	}
+
+	if len(model.pendingGroupBy) > 0 {
+		selectString += " GROUP BY " + strings.Join(model.pendingGroupBy, ", ")
+	}
+
+	if len(model.pendingHaving) > 0 {
+		selectString += " HAVING " + strings.Join(model.pendingHaving, " ")
+	}
+
+	if len(model.pendingGroupBy) > 0 {
+		selectString += " ORDER BY " + strings.Join(model.pendingGroupBy, ", ")
+	}
+
+	selectString += strings.Join(model.pendingUnions, " ")
+
+	if model.limit > 0 {
+		selectString += " LIMIT " + strconv.Itoa(model.limit)
+	}
+
+	if model.offset > 0 {
+		selectString += " OFFSET  " + strconv.Itoa(model.offset)
+	}
+
+	model.lastQuery = selectString
+	return selectString
+}
+
+func (model *SQLModel) executeSelectQuery() error {
+
+	selectString := model.composeSelectString()
+	stmtOut, err := model.db.Prepare(selectString)
+	model.lastQuery = selectString
+
 	if err != nil {
-		return nil, err
+		model.cleanup(err)
+		return err
 	}
 	defer stmtOut.Close()
-	rows, err := stmtOut.Query(id)
+	rows, err := stmtOut.Query()
 
 	columns, err := rows.Columns()
 	if err != nil {
-		return nil, err
+		model.cleanup(err)
+		return err
 	}
 
 	// Make a slice for the values
@@ -227,36 +324,191 @@ func (model SQLModel) Find(id int) (interface{}, error) {
 	// Fetch rows
 	for rows.Next() {
 		// get RawBytes from data
+
 		err = rows.Scan(scanArgs...)
 		if err != nil {
-			return nil, err
+			model.cleanup(err)
+			return err
 		}
 
-		result := model.reflectResult(values, columns)
-
-		// Now do something with the data.
-		// Here we just print each column as a string.
-		var value string
-		for i, col := range values {
-
-			// Here we can check if the value is nil (NULL value)
-			if col == nil {
-				value = "NULL"
-			} else {
-				value = string(col)
-			}
-			fmt.Println(columns[i], ": ", value)
-		}
-		fmt.Println("-----------------------------------")
-
-		return result, nil
+		model.result = append(model.result, model.reflectResult(values, columns))
 	}
 	if err = rows.Err(); err != nil {
-		return nil, err
+		model.cleanup(err)
+		return err
+	}
+	model.cleanup(nil)
+	return nil
+}
+
+func (model *SQLModel) Debug() {
+
+	fmt.Println("selects:" + strings.Join(model.pendingSelects, ", "))
+	fmt.Println("wheres:" + strings.Join(model.pendingWheres, " AND "))
+	fmt.Println("joins:" + strings.Join(model.pendingJoins, " "))
+	fmt.Println("unions:" + strings.Join(model.pendingUnions, " "))
+	fmt.Println("group by:" + strings.Join(model.pendingUnions, ", "))
+}
+
+func (model *SQLModel) Join(table string, condition string, joinType string) *SQLModel {
+	model.pendingJoins = append(model.pendingJoins, joinType+" "+table+" ON "+condition)
+	return model
+}
+
+func (model *SQLModel) Union(selectString string) *SQLModel {
+	model.pendingUnions = append(model.pendingUnions, selectString)
+	return model
+}
+
+func (model *SQLModel) OrWhere(field string, value string) *SQLModel {
+	return model.Where(" OR "+field, value)
+}
+
+func (model *SQLModel) WhereIn(field string, values []string) *SQLModel {
+
+	return model.Where(field+" IN", strings.Join(model.pendingSelects, ", "))
+}
+
+func (model *SQLModel) OrWhereIn(field string, values []string) *SQLModel {
+
+	return model.Where(" OR "+field+" IN", strings.Join(model.pendingSelects, ", "))
+}
+
+func (model *SQLModel) WhereNotIn(field string, values []string) *SQLModel {
+
+	return model.Where(field+" NOT IN", strings.Join(model.pendingSelects, ", "))
+}
+
+func (model *SQLModel) OrWhereNotIn(field string, values []string) *SQLModel {
+
+	return model.Where(" OR "+field+" NOT IN", strings.Join(model.pendingSelects, ", "))
+}
+
+func (model *SQLModel) Like(field string, value string) *SQLModel {
+
+	return model.Where(field+" LIKE", value)
+}
+
+func (model *SQLModel) NotLike(field string, value string) *SQLModel {
+
+	return model.Where(field+" NOT LIKE", value)
+}
+
+func (model *SQLModel) OrLike(field string, value string) *SQLModel {
+
+	return model.Where(" OR "+field+" LIKE", value)
+}
+
+func (model *SQLModel) OrNotLike(field string, value string) *SQLModel {
+
+	return model.Where(" OR "+field+" NOT LIKE", value)
+}
+
+func (model *SQLModel) GroupBy(fields string) *SQLModel {
+
+	model.pendingGroupBy = append(model.pendingGroupBy, fields)
+	return model
+}
+
+func (model *SQLModel) OrderBy(fields string, order string) *SQLModel {
+
+	model.pendingOrderBy = append(model.pendingOrderBy, fields+" "+order)
+	return model
+}
+
+func (model *SQLModel) Having(field string, cond string) *SQLModel {
+
+	concatAnd := func(field string) string {
+		if len(model.pendingHaving) > 0 && !strings.HasPrefix(field, " OR ") {
+			return " AND " + field
+		}
+		return field
 	}
 
-	return nil, nil
+	model.pendingHaving = append(model.pendingHaving, concatAnd(field)+" "+cond)
+	return model
+}
 
+func (model *SQLModel) OrHaving(field string, cond string) *SQLModel {
+	return model.Having(" OR "+field, cond)
+}
+
+func (model *SQLModel) Limit(limit int) *SQLModel {
+	model.limit = limit
+	return model
+}
+
+func (model *SQLModel) Offset(offset int) *SQLModel {
+	model.offset = offset
+	return model
+}
+
+func (model *SQLModel) LastQuery() string {
+	return model.lastQuery
+}
+
+func (model *SQLModel) Where(field string, value string) *SQLModel {
+
+	concatAnd := func(field string) string {
+		if len(model.pendingWheres) > 0 && !strings.HasPrefix(field, " OR ") {
+			return " AND " + field
+		}
+		return field
+	}
+
+	stringifyValue := func(value string) string {
+		if _, err := strconv.Atoi(value); err == nil {
+			return value
+		} else if _, err := strconv.ParseFloat(value, 64); err == nil {
+			return value
+		} else if strings.ToLower(value) == "true" || strings.ToLower(value) == "false" {
+			return value
+		}
+		return "'" + value + "'"
+	}
+
+	hasSpecialSuffix := false
+	specialSuffixes := []string{">=", ">", " <=", " <", " !=", " <>", " NOT LIKE", " LIKE", " NOT IN", " IN"}
+
+	for i := 0; i < len(specialSuffixes); i++ {
+		if strings.HasSuffix(field, specialSuffixes[i]) {
+
+			hasSpecialSuffix = true
+			break
+		}
+	}
+
+	if hasSpecialSuffix {
+		model.pendingWheres = append(model.pendingWheres, concatAnd(field)+" "+stringifyValue(value))
+	} else {
+		model.pendingWheres = append(model.pendingWheres, concatAnd(field)+" = "+stringifyValue(value))
+	}
+
+	return model
+}
+
+func (model *SQLModel) Select(selectString string) *SQLModel {
+
+	model.pendingSelects = append(model.pendingSelects, selectString)
+	return model
+}
+
+func (model *SQLModel) Find(id string) (interface{}, error) {
+
+	err := model.
+		Limit(1).
+		Where(model.key, id).
+		executeSelectQuery()
+
+	return model.result[0], err
+}
+
+func (model SQLModel) FindAll() ([]interface{}, error) {
+
+	err := model.
+		executeSelectQuery()
+
+	return model.result, err
 }
 
 /*
@@ -286,7 +538,7 @@ func (model SQLModel) CreatedOn(row string) (string, error)
 func (model SQLModel) ModifiedOn(row string) (string, error)
 func (model SQLModel) RawSql(sql string)
 
-func (model SQLModel) Select(selectString string) SyncableModel
+
 func (model SQLModel) SelectMax(selectString string) SyncableModel
 func (model SQLModel) SelectMin(selectString string) SyncableModel
 func (model SQLModel) SelectAvg(selectString string) SyncableModel

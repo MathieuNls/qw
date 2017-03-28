@@ -3,7 +3,6 @@ package main
 type SyncableModel interface {
 	Find(id int)
 	FindAll()
-	FindUnionAll()
 	FindAllBy(fields map[string]string, sqlType string)
 	FindBy(field string, value string, sqlType string)
 	Insert(fields map[string]string) (int, error)
