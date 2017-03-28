@@ -159,8 +159,17 @@ func NewSQLModel(table string, dbCons []string) (*SQLModel, error) {
 	model.limit = -1
 	model.offset = -1
 
-	var err error
+	err := openCnx()
 
+	if err != nil {
+		return nil, err
+	}
+
+	return model, nil
+
+}
+
+func (model *SQLModel) openCnx() error {
 	for index := 0; index < len(dbCons); index++ {
 		//Check dns format
 		model.db, err = sql.Open("mysql", dbCons[index])
@@ -179,13 +188,7 @@ func NewSQLModel(table string, dbCons []string) (*SQLModel, error) {
 
 		}
 	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return model, nil
-
+	return err
 }
 
 func (model *SQLModel) cleanup(err error) {
@@ -493,6 +496,26 @@ func (model *SQLModel) Select(selectString string) *SQLModel {
 	return model
 }
 
+func (model *SQLModel) SelectMax(selectString string) *SQLModel {
+
+	return model.Select("MAX(" + selectString + ")")
+}
+
+func (model *SQLModel) SelectMin(selectString string) *SQLModel {
+
+	return model.Select("MIN(" + selectString + ")")
+}
+
+func (model *SQLModel) SelectAvg(selectString string) *SQLModel {
+
+	return model.Select("AVG(" + selectString + ")")
+}
+
+func (model *SQLModel) SelectSum(selectString string) *SQLModel {
+
+	return model.Select("Sum(" + selectString + ")")
+}
+
 func (model *SQLModel) Find(id string) (interface{}, error) {
 
 	err := model.
@@ -503,7 +526,7 @@ func (model *SQLModel) Find(id string) (interface{}, error) {
 	return model.result[0], err
 }
 
-func (model SQLModel) FindAll() ([]interface{}, error) {
+func (model *SQLModel) FindAll() ([]interface{}, error) {
 
 	err := model.
 		executeSelectQuery()
@@ -511,24 +534,160 @@ func (model SQLModel) FindAll() ([]interface{}, error) {
 	return model.result, err
 }
 
+func (model *SQLModel) FindAllBy(fields map[string]string) ([]interface{}, error) {
+
+	for k, v := range fields {
+		model.Where(k, v)
+	}
+
+	err := model.
+		executeSelectQuery()
+
+	return model.result, err
+}
+
+func (model *SQLModel) FindBy(field string, value string) ([]interface{}, error) {
+	err := model.Where(field, value).executeSelectQuery()
+	return model.result, err
+}
+
+func (model *SQLModel) CountAll() (int, error) {
+
+	e := ""
+	model.pendingSelects = []string{}
+	err := model.
+		Select(" count(1) ").
+		db.QueryRow(model.composeSelectString()).Scan(&e)
+
+	returnValue, _ := strconv.Atoi(e)
+	return returnValue, err
+}
+
+func (model *SQLModel) CountBy(field string, value string) (int, error) {
+
+	return model.
+		Where(field, value).
+		CountAll()
+}
+
+func (model *SQLModel) IsUnique(field string, value string) (bool, error) {
+	count, err := model.
+		Where(field, value).
+		CountAll()
+
+	if count == 0 {
+		return true, err
+	}
+
+	return false, err
+}
+
+func (model *SQLModel) Insert(data interface{}) (bool, error) {
+
+	columnString := []string{}
+	var valueString []interface{}
+	placeHolders := []string{}
+	structPKIndex := -1
+
+	s := reflect.ValueOf(data).Elem()
+	typeOfT := s.Type()
+	for i := 0; i < s.NumField(); i++ {
+
+		column, dbTagPresent := typeOfT.Field(i).Tag.Lookup("db")
+
+		if dbTagPresent && column != model.key {
+			columnString = append(columnString, column)
+			valueString = append(valueString, s.Field(i).Interface())
+			placeHolders = append(placeHolders, "?")
+		} else if column == model.key {
+			structPKIndex = i
+		}
+	}
+
+	insertStr := "INSERT INTO " + model.tableName +
+		" (" + strings.Join(columnString, ", ") + ") " +
+		" VALUES (" + strings.Join(placeHolders, ", ") + ")"
+
+	stmtIns, err := model.db.Prepare(insertStr)
+
+	model.lastQuery = insertStr
+
+	if err != nil {
+		return false, err
+	}
+
+	result, err := stmtIns.Exec(valueString...)
+	lastInsertedID, err := result.LastInsertId()
+
+	if err != nil {
+		return false, err
+	}
+
+	if structPKIndex != -1 {
+		s.Field(structPKIndex).SetInt(lastInsertedID)
+	}
+
+	return true, nil
+}
+
+func (model *SQLModel) Delete(data interface{}) (bool, error) {
+
+	structPKIndex := -1
+
+	s := reflect.ValueOf(data).Elem()
+	typeOfT := s.Type()
+	for i := 0; i < s.NumField(); i++ {
+
+		column, _ := typeOfT.Field(i).Tag.Lookup("db")
+
+		if column == model.key {
+			structPKIndex = i
+			break
+		}
+	}
+
+	pk := s.Field(structPKIndex).Interface().(int)
+
+	deleteStr := "DELETE FROM " + model.tableName +
+		" WHERE " + model.key + " = ?"
+
+	stmtIns, err := model.db.Prepare(deleteStr)
+
+	model.lastQuery = deleteStr
+
+	if err != nil {
+		return false, err
+	}
+
+	result, err := stmtIns.Exec(pk)
+	lastInsertedID, err := result.LastInsertId()
+
+	if err != nil {
+		return false, err
+	}
+
+	if structPKIndex != -1 {
+		s.Field(structPKIndex).SetInt(lastInsertedID)
+	}
+
+	data = nil
+
+	return true, nil
+
+}
+
 /*
-func (model SQLModel) FindAll()
-func (model SQLModel) FindUnionAll()
-func (model SQLModel) FindAllBy(fields map[string]string, sqlType string)
-func (model SQLModel) FindBy(field string, value string, sqlType string)
+
 func (model SQLModel) Insert(fields map[string]string) (int, error)
-func (model SQLModel) InsertBatch(fields []map[string]string)
+
 func (model SQLModel) Update(where map[string]string, data map[string]string) (bool, error)
 func (model SQLModel) Increment(where map[string]string, field string) (bool, error)
 func (model SQLModel) Decrement(where map[string]string, field string) (bool, error)
 func (model SQLModel) Delete(id int) (bool, error)
 func (model SQLModel) DeleteWhere(where map[string]string) (bool, error)
-func (model SQLModel) IsUnique(field string, value string) (bool, error)
-func (model SQLModel) CountAll() (int, error)
-func (model SQLModel) CountBy(field string, value string) (int, error)
 
-func (model SQLModel) Where(field string, value string) (SyncableModel, error)
-func (model SQLModel) OrderBy(field string, order string)
+
+
 
 func (model SQLModel) SoftDelete(mode bool) SyncableModel
 func (model SQLModel) AsArray() SyncableModel
@@ -539,29 +698,9 @@ func (model SQLModel) ModifiedOn(row string) (string, error)
 func (model SQLModel) RawSql(sql string)
 
 
-func (model SQLModel) SelectMax(selectString string) SyncableModel
-func (model SQLModel) SelectMin(selectString string) SyncableModel
-func (model SQLModel) SelectAvg(selectString string) SyncableModel
-func (model SQLModel) SelectSum(selectString string) SyncableModel
+
 func (model SQLModel) Distinct(selectString string) SyncableModel
 
-func (model SQLModel) From(from string) SyncableModel
-func (model SQLModel) Join(table string, condition string, joinType string) SyncableModel
-func (model SQLModel) Union(selectString string) SyncableModel
-func (model SQLModel) OrWhere(key string, value string) SyncableModel
-func (model SQLModel) WhereIn(key string, values []string) SyncableModel
-func (model SQLModel) OrWhereIn(key string, values []string) SyncableModel
-func (model SQLModel) WhereNotIn(key string, values []string) SyncableModel
-func (model SQLModel) OrWhereNotIn(key string, values []string) SyncableModel
-func (model SQLModel) Like(key string, value string) SyncableModel
-func (model SQLModel) NotLike(key string, value string) SyncableModel
-func (model SQLModel) OrLike(key string, value string) SyncableModel
-func (model SQLModel) OrNotLike(key string, value string) SyncableModel
-func (model SQLModel) GroupBy(key string) SyncableModel
-func (model SQLModel) Having(key string, value string) SyncableModel
-func (model SQLModel) OrHaving(key string, value string) SyncableModel
-func (model SQLModel) Limit(number int) SyncableModel
-func (model SQLModel) Offset(number int) SyncableModel
 func (model SQLModel) Set(key string, value string) SyncableModel
 func (model SQLModel) AffectedRows() (int, error)
 func (model SQLModel) LastQuery() (bool, error)
