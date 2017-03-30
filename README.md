@@ -11,7 +11,7 @@ go-sql-wapper is not an orm but, as its name suggests, a sql-wrapper. It allows 
 - [select](#select)
 - [update](#update)
 - [delete](#delete)
-- update (WIP)
+- [update](#update)
 
 in a type safe, struct directed way. 
 
