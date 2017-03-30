@@ -12,6 +12,7 @@ go-sql-wapper is not an orm but, as its name suggests, a sql-wrapper. It allows 
 - [update](#update)
 - [delete](#delete)
 - [update](#update)
+- [callbacks](#callbacks)
 
 in a type safe, struct directed way. 
 
@@ -108,6 +109,30 @@ func main() {
 }
 ```
 
+### Callbacks
+
+Callbacks are also available in case you need to do some more magic before or after any of the `select`, `update`, `delete` or `update` functions.
+
+Here's an example:
+
+```go
+
+	model.AfterUpdate(
+		[]func([]interface{}){
+			func(rows []interface{}) {
+
+				for index := 0; index < len(rows); index++ {
+					fmt.Println(rows[0]) 
+					rows[0].(*MyStruct).ExportedString = "awdawdawdawdawd"
+					fmt.Println(rows[0])
+				}
+			},
+		},
+	)
+
+```
+
+As pointer are passed thought, you can modify the object and it'll impact what you send to / get from the database.
 
 # Why ?
 
