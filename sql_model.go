@@ -7,10 +7,10 @@ import (
 	"strconv"
 
 	"strings"
-
-	_ "github.com/go-sql-driver/mysql"
 )
 
+//SQLModel represents a SQLModel struct that offers helper function to safely
+//interact with the database in go
 type SQLModel struct {
 
 	//The name of the db table this model primarily uses.
@@ -139,6 +139,7 @@ type SQLModel struct {
 	pendingOrderBy []string
 }
 
+//NewSQLModel returns a pointer to a new SQLModel with all default values setted
 func NewSQLModel(table string, dbCons []string, cnxOpener CnxOpener) (*SQLModel, error) {
 	model := new(SQLModel)
 	model.tableName = table
@@ -237,6 +238,7 @@ func (model *SQLModel) reflectResult(values []sql.RawBytes, columns []string) in
 	return reflected.Interface()
 }
 
+// composeSelectString merges all the select clauses together
 func (model *SQLModel) composeSelectString() string {
 	selectString := "SELECT "
 
@@ -282,6 +284,7 @@ func (model *SQLModel) composeSelectString() string {
 	return selectString
 }
 
+// executeSelectQuery queries the database
 func (model *SQLModel) executeSelectQuery() error {
 
 	selectString := model.composeSelectString()
@@ -332,6 +335,7 @@ func (model *SQLModel) executeSelectQuery() error {
 	return nil
 }
 
+// Debug prints all the select clauses to the consol
 func (model *SQLModel) Debug() {
 
 	fmt.Println("selects:" + strings.Join(model.pendingSelects, ", "))
@@ -341,72 +345,88 @@ func (model *SQLModel) Debug() {
 	fmt.Println("group by:" + strings.Join(model.pendingUnions, ", "))
 }
 
+// Join add a join clause to the ongoing select
+//model.Join("myOtherTable", "mytable.id = myOtherTable.id", "left")
+//will produce left join myOtherTable on mytable.id = myOtherTable.id
 func (model *SQLModel) Join(table string, condition string, joinType string) *SQLModel {
 	model.pendingJoins = append(model.pendingJoins, joinType+" JOIN "+" "+table+" ON "+condition)
 	return model
 }
 
+// Union adds a union clause
 func (model *SQLModel) Union(selectString string) *SQLModel {
 	model.pendingUnions = append(model.pendingUnions, selectString)
 	return model
 }
 
+// OrWhere adds a OrWhere clause
 func (model *SQLModel) OrWhere(field string, value string) *SQLModel {
 	return model.Where(" OR "+field, value)
 }
 
+// WhereIn adds a WhereIn clause
 func (model *SQLModel) WhereIn(field string, values []string) *SQLModel {
 
 	return model.Where(field+" IN", strings.Join(model.pendingSelects, ", "))
 }
 
+// OrWhereIn adds a OrWhereIn clause
 func (model *SQLModel) OrWhereIn(field string, values []string) *SQLModel {
 
 	return model.Where(" OR "+field+" IN", strings.Join(model.pendingSelects, ", "))
 }
 
+// WhereNotIn adds a WhereNotIn clause
 func (model *SQLModel) WhereNotIn(field string, values []string) *SQLModel {
 
 	return model.Where(field+" NOT IN", strings.Join(model.pendingSelects, ", "))
 }
 
+// OrWhereNotIn adds a OrWhereNotIn clause
 func (model *SQLModel) OrWhereNotIn(field string, values []string) *SQLModel {
 
 	return model.Where(" OR "+field+" NOT IN", strings.Join(model.pendingSelects, ", "))
 }
 
+// Like adds a Like clause
 func (model *SQLModel) Like(field string, value string) *SQLModel {
 
 	return model.Where(field+" LIKE", value)
 }
 
+// NotLike adds a NotLike clause
 func (model *SQLModel) NotLike(field string, value string) *SQLModel {
 
 	return model.Where(field+" NOT LIKE", value)
 }
 
+// OrLike adds a OrLike clause
 func (model *SQLModel) OrLike(field string, value string) *SQLModel {
 
 	return model.Where(" OR "+field+" LIKE", value)
 }
 
+// OrNotLike adds a OrNotLike clause
 func (model *SQLModel) OrNotLike(field string, value string) *SQLModel {
 
 	return model.Where(" OR "+field+" NOT LIKE", value)
 }
 
+// GroupBy adds a GroupBy clause
 func (model *SQLModel) GroupBy(fields string) *SQLModel {
 
 	model.pendingGroupBy = append(model.pendingGroupBy, fields)
 	return model
 }
 
+// OrderBy adds a OrderBy clause
 func (model *SQLModel) OrderBy(fields string, order string) *SQLModel {
 
 	model.pendingOrderBy = append(model.pendingOrderBy, fields+" "+order)
 	return model
 }
 
+// Having adds a Having clause
 func (model *SQLModel) Having(field string, cond string) *SQLModel {
 
 	concatAnd := func(field string) string {
@@ -420,24 +440,29 @@ func (model *SQLModel) Having(field string, cond string) *SQLModel {
 	return model
 }
 
+// OrHaving adds a OrHaving clause
 func (model *SQLModel) OrHaving(field string, cond string) *SQLModel {
 	return model.Having(" OR "+field, cond)
 }
 
+// Limit adds a Limit clause
 func (model *SQLModel) Limit(limit int) *SQLModel {
 	model.limit = limit
 	return model
 }
 
+// Offset adds a Offset clause
 func (model *SQLModel) Offset(offset int) *SQLModel {
 	model.offset = offset
 	return model
 }
 
+// LastQuery returns the last sql query executed
 func (model *SQLModel) LastQuery() string {
 	return model.lastQuery
 }
 
+// Where adds a Where clause
 func (model *SQLModel) Where(field string, value string) *SQLModel {
 
 	concatAnd := func(field string) string {
@@ -478,32 +503,38 @@ func (model *SQLModel) Where(field string, value string) *SQLModel {
 	return model
 }
 
+// Select adds a field to the select
 func (model *SQLModel) Select(selectString string) *SQLModel {
 
 	model.pendingSelects = append(model.pendingSelects, selectString)
 	return model
 }
 
+// SelectMax adds a SelectMax field to the select
 func (model *SQLModel) SelectMax(selectString string) *SQLModel {
 
 	return model.Select("MAX(" + selectString + ")")
 }
 
+// SelectMin adds a SelectMin field to the select
 func (model *SQLModel) SelectMin(selectString string) *SQLModel {
 
 	return model.Select("MIN(" + selectString + ")")
 }
 
+// SelectAvg adds a SelectAvg field to the select
 func (model *SQLModel) SelectAvg(selectString string) *SQLModel {
 
 	return model.Select("AVG(" + selectString + ")")
 }
 
+// SelectSum adds a SelectSum field to the select
 func (model *SQLModel) SelectSum(selectString string) *SQLModel {
 
 	return model.Select("Sum(" + selectString + ")")
 }
 
+// Find returns the first row with key=id in a struct of ReturnType type
 func (model *SQLModel) Find(id string) (interface{}, error) {
 
 	err := model.
@@ -514,6 +545,7 @@ func (model *SQLModel) Find(id string) (interface{}, error) {
 	return model.result[0], err
 }
 
+// FindAll returns all the row matching the query in an array of ReturnType type
 func (model *SQLModel) FindAll() ([]interface{}, error) {
 
 	err := model.
@@ -522,6 +554,7 @@ func (model *SQLModel) FindAll() ([]interface{}, error) {
 	return model.result, err
 }
 
+// FindAllBy returns all the row matching the fields in an array of ReturnType type
 func (model *SQLModel) FindAllBy(fields map[string]string) ([]interface{}, error) {
 
 	for k, v := range fields {
@@ -534,11 +567,13 @@ func (model *SQLModel) FindAllBy(fields map[string]string) ([]interface{}, error
 	return model.result, err
 }
 
-func (model *SQLModel) FindBy(field string, value string) ([]interface{}, error) {
+// FindBy returns all the first row matching the on ongoing select in a ReturnType struct
+func (model *SQLModel) FindBy(field string, value string) (interface{}, error) {
 	err := model.Where(field, value).executeSelectQuery()
-	return model.result, err
+	return model.result[0], err
 }
 
+// CountAll returns the number of rows in the table
 func (model *SQLModel) CountAll() (int, error) {
 
 	e := ""
@@ -551,6 +586,7 @@ func (model *SQLModel) CountAll() (int, error) {
 	return returnValue, err
 }
 
+// CountBy returns the number of rows in the table with field = value
 func (model *SQLModel) CountBy(field string, value string) (int, error) {
 
 	return model.
@@ -558,6 +594,7 @@ func (model *SQLModel) CountBy(field string, value string) (int, error) {
 		CountAll()
 }
 
+// IsUnique returns if field=value is unique in the db
 func (model *SQLModel) IsUnique(field string, value string) (bool, error) {
 	count, err := model.
 		Where(field, value).
@@ -570,6 +607,7 @@ func (model *SQLModel) IsUnique(field string, value string) (bool, error) {
 	return false, err
 }
 
+// Insert insert a struct to the db
 func (model *SQLModel) Insert(data interface{}) (bool, error) {
 
 	columnString := []string{}
@@ -618,6 +656,7 @@ func (model *SQLModel) Insert(data interface{}) (bool, error) {
 	return true, nil
 }
 
+// Delete deletes a struct from the db based on key
 func (model *SQLModel) Delete(data interface{}) (bool, error) {
 
 	structPKIndex := -1

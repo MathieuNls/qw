@@ -5,13 +5,19 @@ import (
 	"fmt"
 )
 
+//CnxOpener defines the requiered method for each
+//cnx drivers
 type CnxOpener interface {
 	OpenCnx([]string) (*sql.DB, error)
 }
 
+//MySQLCnxOpenner is CnxOpener for MySql
 type MySQLCnxOpenner struct {
 }
 
+//OpenCnx opens a connection to a MySQL server.
+//It iterates over dbCons until it can open a
+//connection.
 func (CnxOpener MySQLCnxOpenner) OpenCnx(dbCons []string) (*sql.DB, error) {
 
 	var db *sql.DB
