@@ -173,6 +173,12 @@ func NewSQLModel(table string, dbCons []string, cnxOpener CnxOpener) (*SQLModel,
 
 }
 
+//Key allow to modify the default id as pk for the table
+func (model *SQLModel) Key(key string) *SQLModel {
+	model.key = key
+	return model
+}
+
 //Cleans up everything and make the model ready
 //for a new request.
 //It receives and stores the last error if needs be
