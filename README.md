@@ -96,7 +96,7 @@ func main() {
 Why would you want an SQL wrapper in Go ? Well, don't you like to have enforced types and the additional safety that come with it ? Yes, then, this 
  
 ```go
-stmtOut, err := model.db.Prepare("Select * from myTable")
+stmtOut, err := db.Prepare("Select * from myTable")
 
 if err != nil {
     panic(err)
