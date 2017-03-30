@@ -1,5 +1,7 @@
 [![Build Status](https://travis-ci.org/MathieuNls/go-sql-wrapper.png)](https://travis-ci.org/MathieuNls/go-sql-wrapper)
 [![GoDoc](https://godoc.org/github.com/MathieuNls/go-sql-wrapper?status.png)](https://godoc.org/github.comMathieuNls/go-sql-wrapper)
+[![codecov](https://codecov.io/gh/MathieuNls/go-sql-wrapper/branch/master/graph/badge.svg)](https://codecov.io/gh/MathieuNls/go-sql-wrapper)
+
 
 # go-sql-wrapper
 
