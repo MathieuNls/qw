@@ -7,23 +7,27 @@
 
 go-sql-wapper is not an orm but, as its name suggests, a sql-wrapper. It allows you do to:
 
-- [insert](#Insert)
-- [select](#Select)
-- [delete](#Delete)
+- [insert](#insert)
+- [select](#select)
+- [delete](#delete)
 - update (WIP)
 
 in a type safe, struct directed way. 
 
-## Insert
-
 ```go
 type MyStuct struct {
-    dbId             int     `db:id`
+    DbId             int     `db:id`
 	ExportedInted    int     `db:"aaa"`
 	ExportedString   string  `db:"bbb"`
 	ExportedFloat64  float64 `db:"ccc"`
 }
+```
 
+Structs are annoted with a `db:""` tag that make the mapping between the database schema and your go struct.
+
+## Insert
+
+```go
 func main() {
     model, err := NewSQLModel("MyTable", []string{"root:root@tcp(127.0.0.1:3306)/mydb", new(MySQLCnxOpenner))
 
@@ -43,6 +47,8 @@ func main() {
 ```go
 func main() {
 
+     model, err := NewSQLModel("MyTable", []string{"root:root@tcp(127.0.0.1:3306)/mydb", new(MySQLCnxOpenner))
+
     result := model.select("aaa, bbb").Find("1")
     //Produces Select aaa,bbb where id = 1
     fmt.Println(result)
@@ -55,11 +61,16 @@ func main() {
 ```go
 func main() {
 
-    result := model.select("aaa, bbb").Find("1")
-    //Produces Select aaa,bbb where id = 1
+     model, err := NewSQLModel("MyTable", []string{"root:root@tcp(127.0.0.1:3306)/mydb", new(MySQLCnxOpenner))
+
+    myStruct := new(MyStruct)
+    myStruct.DbId = 1;
+
+    result := model.delete(myStruct)
+    //Produces Delete from MyTable where id = 1
     fmt.Println(result)
-    //Prints MyStruct{1, 2, string, 0.0 }
-    //Fetched MyStruct from the db, ExportedFloat64 is not populated as ccc wasn't requested
+    //Prints nil
+    //The pointer is dereferenced when deleted
 }
 ```
 
