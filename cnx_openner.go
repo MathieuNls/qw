@@ -3,6 +3,8 @@ package gosqlwrapper
 import (
 	"database/sql"
 	"fmt"
+	//Import all package for use of mysql
+	_ "github.com/go-sql-driver/mysql"
 )
 
 //CnxOpener defines the requiered method for each
