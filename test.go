@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 type Bug struct {
 	ID    int    `db:"INTERNAL_ID"`
 	ExtID string `db:"EXTERNAL_ID"`
@@ -26,27 +28,29 @@ func main() {
 	// 	reflected.Field(i).SetInt(int64(i))
 	// }
 
-	// fmt.Println(reflected)
+	// // fmt.Println(reflected)
 
 	s := []string{
 		"root:root@tcp(127.0.0.1:3306)/taxo",
 	}
-	model, err := NewSQLModel("bugs", s)
+	model, err := NewSQLModel("bugs", s, new(MySQLCnxOpenner))
 
-	model.returnType = new(A)
+	if err != nil {
+		panic("1")
+	}
 
-	model.Select("a, b, c").
-	Select("d").
-	Where("a", "b").
+	model.returnType = new(Bug)
 
+	v, err := model.Select("INTERNAL_ID").
+		Select("EXTERNAL_ID").
+		FindAll()
 
-	// v, err := model.Select("INTERNAL_ID").
-	// 	Select("EXTERNAL_ID").
-	// 	CountAll()
+	fmt.Println(model.LastQuery())
 
 	// fmt.Println(model.LastQuery())
-	// fmt.Println(err)
-	// fmt.Println(v)
+	fmt.Println(v)
+	fmt.Println(err)
+	fmt.Println(v[0].(Bug))
 
 	// for index := 0; index < len(v); index++ {
 	// 	fmt.Println(v[index].(Bug).ExtID)

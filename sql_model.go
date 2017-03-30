@@ -98,7 +98,7 @@ type SQLModel struct {
 
 	/**
 	 * Holds the return type temporarily when using the
-	 * as_array() and as_object() methods
+	 * as_map() methods
 	 */
 	tmpReturnType string
 
@@ -119,26 +119,27 @@ type SQLModel struct {
 	//return struct holder
 	result []interface{}
 
+	//The last query executed
 	lastQuery string
 
+	//mysql limit clause
 	limit int
 
+	//mysql offset clause
 	offset int
 
-	pendingWheres []string
-
-	pendingJoins []string
-
-	pendingUnions []string
-
+	/**
+	* Slices used to construct query
+	 */
+	pendingWheres  []string
+	pendingJoins   []string
+	pendingUnions  []string
 	pendingGroupBy []string
-
-	pendingHaving []string
-
+	pendingHaving  []string
 	pendingOrderBy []string
 }
 
-func NewSQLModel(table string, dbCons []string) (*SQLModel, error) {
+func NewSQLModel(table string, dbCons []string, cnxOpener CnxOpener) (*SQLModel, error) {
 	model := new(SQLModel)
 	model.tableName = table
 	model.key = "id"
@@ -159,7 +160,9 @@ func NewSQLModel(table string, dbCons []string) (*SQLModel, error) {
 	model.limit = -1
 	model.offset = -1
 
-	err := openCnx()
+	var err error
+
+	model.db, err = cnxOpener.OpenCnx(dbCons)
 
 	if err != nil {
 		return nil, err
@@ -169,28 +172,9 @@ func NewSQLModel(table string, dbCons []string) (*SQLModel, error) {
 
 }
 
-func (model *SQLModel) openCnx() error {
-	for index := 0; index < len(dbCons); index++ {
-		//Check dns format
-		model.db, err = sql.Open("mysql", dbCons[index])
-		if err != nil {
-			fmt.Println(dbCons[index] + " failed to open")
-		} else {
-			//Check database connectivity
-			err = model.db.Ping()
-			if err != nil {
-				fmt.Println(dbCons[index] + " failed to answer ping")
-			} else {
-				//Database is answering, break here
-				break
-			}
-			defer model.db.Close()
-
-		}
-	}
-	return err
-}
-
+//Cleans up everything and make the model ready
+//for a new request.
+//It receives and stores the last error if needs be
 func (model *SQLModel) cleanup(err error) {
 	model.pendingSelects = []string{}
 	model.pendingWheres = []string{}
@@ -238,7 +222,11 @@ func (model *SQLModel) reflectResult(values []sql.RawBytes, columns []string) in
 			case "string":
 				reflected.Field(i).SetString(string(value))
 				break
-			case "float":
+			case "float64":
+				floatValue, _ := strconv.ParseFloat(string(value), 64)
+				reflected.Field(i).SetFloat(floatValue)
+				break
+			case "float32":
 				floatValue, _ := strconv.ParseFloat(string(value), 32)
 				reflected.Field(i).SetFloat(floatValue)
 				break
@@ -261,7 +249,7 @@ func (model *SQLModel) composeSelectString() string {
 	selectString += " FROM " + model.tableName
 
 	if len(model.pendingJoins) > 0 {
-		selectString += " JOIN " + strings.Join(model.pendingJoins, ", ")
+		selectString += strings.Join(model.pendingJoins, " ")
 	}
 
 	if len(model.pendingWheres) > 0 {
@@ -354,7 +342,7 @@ func (model *SQLModel) Debug() {
 }
 
 func (model *SQLModel) Join(table string, condition string, joinType string) *SQLModel {
-	model.pendingJoins = append(model.pendingJoins, joinType+" "+table+" ON "+condition)
+	model.pendingJoins = append(model.pendingJoins, joinType+" JOIN "+" "+table+" ON "+condition)
 	return model
 }
 
@@ -675,79 +663,3 @@ func (model *SQLModel) Delete(data interface{}) (bool, error) {
 	return true, nil
 
 }
-
-/*
-
-func (model SQLModel) Insert(fields map[string]string) (int, error)
-
-func (model SQLModel) Update(where map[string]string, data map[string]string) (bool, error)
-func (model SQLModel) Increment(where map[string]string, field string) (bool, error)
-func (model SQLModel) Decrement(where map[string]string, field string) (bool, error)
-func (model SQLModel) Delete(id int) (bool, error)
-func (model SQLModel) DeleteWhere(where map[string]string) (bool, error)
-
-
-
-
-func (model SQLModel) SoftDelete(mode bool) SyncableModel
-func (model SQLModel) AsArray() SyncableModel
-func (model SQLModel) AsObject() SyncableModel
-func (model SQLModel) AsJson() SyncableModel
-func (model SQLModel) CreatedOn(row string) (string, error)
-func (model SQLModel) ModifiedOn(row string) (string, error)
-func (model SQLModel) RawSql(sql string)
-
-
-
-func (model SQLModel) Distinct(selectString string) SyncableModel
-
-func (model SQLModel) Set(key string, value string) SyncableModel
-func (model SQLModel) AffectedRows() (int, error)
-func (model SQLModel) LastQuery() (bool, error)
-func (model SQLModel) Truncate() (bool, error)
-func (model SQLModel) InsertedID() (int, error)
-
-func (model SQLModel) Table() string
-func (model SQLModel) LastError() error
-func (model SQLModel) Key() string
-func (model SQLModel) CreatedField() string
-func (model SQLModel) ModifiedField() string
-func (model SQLModel) DeletedField() string
-func (model SQLModel) Created() bool
-func (model SQLModel) Modified() bool
-func (model SQLModel) Deleted() bool
-func (model SQLModel) BeforeInsert() []func()
-func (model SQLModel) AfterInsert() []func()
-func (model SQLModel) BeforeUpdate() []func()
-func (model SQLModel) AfterUpdate() []func()
-func (model SQLModel) BeforeFind() []func()
-func (model SQLModel) AfterFind() []func()
-func (model SQLModel) BeforeUnionAll() []func()
-func (model SQLModel) AfterUnionAll() []func()
-func (model SQLModel) BeforeDelete() []func()
-func (model SQLModel) AfterDelete() []func()
-func (model SQLModel) ReturnType() string
-func (model SQLModel) ReturnInsertID() string
-
-func (model SQLModel) SetTable(string) SyncableModel
-func (model SQLModel) SetLastError(error) SyncableModel
-func (model SQLModel) SetKey(string) SyncableModel
-func (model SQLModel) SetCreatedField(string) SyncableModel
-func (model SQLModel) SetModifiedField(string) SyncableModel
-func (model SQLModel) SetDeletedField(string) SyncableModel
-func (model SQLModel) SetCreated(bool) SyncableModel
-func (model SQLModel) SetModified(bool) SyncableModel
-func (model SQLModel) SetDeleted(bool) SyncableModel
-func (model SQLModel) SetBeforeInsert([]func()) SyncableModel
-func (model SQLModel) SetAfterInsert([]func()) SyncableModel
-func (model SQLModel) SetBeforeUpdate([]func()) SyncableModel
-func (model SQLModel) SetAfterUpdate([]func()) SyncableModel
-func (model SQLModel) SetBeforeFind([]func()) SyncableModel
-func (model SQLModel) SetAfterFind([]func()) SyncableModel
-func (model SQLModel) SetBeforeUnionAll([]func()) SyncableModel
-func (model SQLModel) SetAfterUnionAll([]func()) SyncableModel
-func (model SQLModel) SetBeforeDelete([]func()) SyncableModel
-func (model SQLModel) SetAfterDelete([]func()) SyncableModel
-func (model SQLModel) SetReturnType(string) SyncableModel
-func (model SQLModel) SetReturnInsertID(string) SyncableModel
-**/
