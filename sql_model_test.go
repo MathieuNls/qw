@@ -152,16 +152,30 @@ func TestReflectResult(t *testing.T) {
 
 }
 
-type CnxMockWithForSelect struct {
+/* Need mock
+func TestUpdate(t *testing.T) {
+
+	type Bug struct {
+		ID    int    `db:"INTERNAL_ID"`
+		ExtID string `db:"EXTERNAL_ID"`
+	}
+
+	s := []string{
+		"root:root@tcp(127.0.0.1:3306)/taxo",
+	}
+
+	b := new(Bug)
+	b.ExtID = "aaaaa"
+	b.ID = 5
+
+	model, err := NewSQLModel("bugs", s, new(MySQLCnxOpenner))
+
+	r, err := model.
+		Key("INTERNAL_ID").
+		Update(b)
+
+	fmt.Println(r)
+	fmt.Println(err)
+
 }
-
-//Mock implementation of the CnxOpener type
-func (m *CnxMockWithForSelect) OpenCnx(dbCons []string) (*sql.DB, error) {
-
-	db, mock, err := sqlmock.New()
-
-	mock.ExpectPrepare("SELECT  *  FROM t").
-		ExpectQuery().
-		WillReturnRows(sqlmock.NewRows([]string{"ID", "NAME", "TEST"}).FromCSVString("1,test,1.2"))
-	return db, err
-}
+*/

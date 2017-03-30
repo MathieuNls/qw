@@ -750,3 +750,46 @@ func (model *SQLModel) Delete(data interface{}) (bool, error) {
 	return true, nil
 
 }
+
+//Update sync the data struct with the db according to its model.key field
+func (model *SQLModel) Update(data interface{}) (bool, error) {
+
+	columnString := []string{}
+	var valueString []interface{}
+	structPKIndex := -1
+
+	s := reflect.ValueOf(data).Elem()
+	typeOfT := s.Type()
+	for i := 0; i < s.NumField(); i++ {
+
+		column, dbTagPresent := typeOfT.Field(i).Tag.Lookup("db")
+
+		if dbTagPresent && column != model.key {
+			columnString = append(columnString, column+" = ?")
+			valueString = append(valueString, s.Field(i).Interface())
+		} else if column == model.key {
+			structPKIndex = i
+		}
+	}
+
+	insertStr := "UPDATE " + model.tableName + " SET " +
+		strings.Join(columnString, ", ") +
+		" WHERE " + model.key + " = ?"
+
+	stmtIns, err := model.db.Prepare(insertStr)
+
+	model.lastQuery = insertStr
+
+	if err != nil {
+		return false, err
+	}
+
+	result, err := stmtIns.Exec(append(valueString, s.Field(structPKIndex).Interface())...)
+	affectedRows, err := result.RowsAffected()
+
+	if err != nil {
+		return false, err
+	}
+
+	return affectedRows == 1, nil
+}
