@@ -77,16 +77,14 @@ type SQLModel struct {
 	* </code>
 	**/
 
-	beforeInsert   []func()
-	afterInsert    []func()
-	beforeUpdate   []func()
-	afterUpdate    []func()
-	beforeFind     []func()
-	afterFind      []func()
-	beforeUnionAll []func()
-	afterUnionAll  []func()
-	beforeDelete   []func()
-	afterDelete    []func()
+	beforeInsert []func([]interface{})
+	afterInsert  []func([]interface{})
+	beforeUpdate []func([]interface{})
+	afterUpdate  []func([]interface{})
+	beforeFind   []func([]interface{})
+	afterFind    []func([]interface{})
+	beforeDelete []func([]interface{})
+	afterDelete  []func([]interface{})
 
 	/**
 	 * By default, we return items as objects. You can change this for the
@@ -335,6 +333,8 @@ func (model *SQLModel) composeSelectString() string {
 // executeSelectQuery queries the database
 func (model *SQLModel) executeSelectQuery() error {
 
+	model.executebeforeInsert()
+
 	selectString := model.composeSelectString()
 	stmtOut, err := model.db.Prepare(selectString)
 	model.lastQuery = selectString
@@ -379,7 +379,11 @@ func (model *SQLModel) executeSelectQuery() error {
 		model.cleanup(err)
 		return err
 	}
+
+	model.executeafterInsert()
+
 	model.cleanup(nil)
+
 	return nil
 }
 
@@ -658,6 +662,9 @@ func (model *SQLModel) IsUnique(field string, value string) (bool, error) {
 // Insert insert a struct to the db
 func (model *SQLModel) Insert(data interface{}) (bool, error) {
 
+	model.result = []interface{}{data}
+	model.executebeforeInsert()
+
 	columnString := []string{}
 	var valueString []interface{}
 	placeHolders := []string{}
@@ -701,11 +708,16 @@ func (model *SQLModel) Insert(data interface{}) (bool, error) {
 		s.Field(structPKIndex).SetInt(lastInsertedID)
 	}
 
+	model.executeafterInsert()
+
 	return true, nil
 }
 
 // Delete deletes a struct from the db based on key
 func (model *SQLModel) Delete(data interface{}) (bool, error) {
+
+	model.result = []interface{}{data}
+	model.executebeforeDelete()
 
 	structPKIndex := -1
 
@@ -747,12 +759,17 @@ func (model *SQLModel) Delete(data interface{}) (bool, error) {
 
 	data = nil
 
+	model.executeafterDelete()
+
 	return true, nil
 
 }
 
 //Update sync the data struct with the db according to its model.key field
 func (model *SQLModel) Update(data interface{}) (bool, error) {
+
+	model.result = []interface{}{data}
+	model.executebeforeUpdate()
 
 	columnString := []string{}
 	var valueString []interface{}
@@ -791,5 +808,111 @@ func (model *SQLModel) Update(data interface{}) (bool, error) {
 		return false, err
 	}
 
+	model.executeafterUpdate()
+
 	return affectedRows == 1, nil
+}
+
+//BeforeInsert sets the BeforeInsert triggers
+func (model *SQLModel) BeforeInsert(triggers []func([]interface{})) *SQLModel {
+	model.beforeInsert = triggers
+	return model
+}
+
+//AfterInsert sets the AfterInsert triggers
+func (model *SQLModel) AfterInsert(triggers []func([]interface{})) *SQLModel {
+	model.afterInsert = triggers
+	return model
+}
+
+//BeforeUpdate sets the BeforeUpdate triggers
+func (model *SQLModel) BeforeUpdate(triggers []func([]interface{})) *SQLModel {
+	model.beforeUpdate = triggers
+	return model
+}
+
+//AfterUpdate sets the AfterUpdate triggers
+func (model *SQLModel) AfterUpdate(triggers []func([]interface{})) *SQLModel {
+	model.afterUpdate = triggers
+	return model
+}
+
+//BeforeFind sets the BeforeFind triggers
+func (model *SQLModel) BeforeFind(triggers []func([]interface{})) *SQLModel {
+	model.beforeFind = triggers
+	return model
+}
+
+//AfterFind sets the AfterFind triggers
+func (model *SQLModel) AfterFind(triggers []func([]interface{})) *SQLModel {
+	model.afterFind = triggers
+	return model
+}
+
+//BeforeDelete sets the BeforeDelete triggers
+func (model *SQLModel) BeforeDelete(triggers []func([]interface{})) *SQLModel {
+	model.beforeDelete = triggers
+	return model
+}
+
+//AfterDelete sets the AfterDelete triggers
+func (model *SQLModel) AfterDelete(triggers []func([]interface{})) *SQLModel {
+	model.afterDelete = triggers
+	return model
+}
+
+//executebeforeInsert executes the beforeInsert triggers
+func (model *SQLModel) executebeforeInsert() {
+	for index := 0; index < len(model.beforeInsert); index++ {
+		model.beforeInsert[index](model.result)
+	}
+}
+
+//executeafterInsert executes the afterInsert triggers
+func (model *SQLModel) executeafterInsert() {
+	for index := 0; index < len(model.afterInsert); index++ {
+		model.afterInsert[index](model.result)
+	}
+}
+
+//executebeforeUpdate executes the beforeUpdate triggers
+func (model *SQLModel) executebeforeUpdate() {
+	for index := 0; index < len(model.beforeUpdate); index++ {
+		model.beforeUpdate[index](model.result)
+	}
+}
+
+//executeafterUpdate executes the afterUpdate triggers
+func (model *SQLModel) executeafterUpdate() {
+	for index := 0; index < len(model.afterUpdate); index++ {
+		model.afterUpdate[index](model.result)
+	}
+}
+
+//executebeforeFind executes the beforeFind triggers
+func (model *SQLModel) executebeforeFind() {
+	for index := 0; index < len(model.beforeFind); index++ {
+		model.beforeFind[index](model.result)
+	}
+}
+
+//executeafterFind executes the afterFind triggers
+func (model *SQLModel) executeafterFind() {
+	for index := 0; index < len(model.afterFind); index++ {
+		model.afterFind[index](model.result)
+	}
+}
+
+//executebeforeDelete executes the beforeDelete triggers
+func (model *SQLModel) executebeforeDelete() {
+	for index := 0; index < len(model.beforeDelete); index++ {
+		model.beforeDelete[index](model.result)
+	}
+}
+
+//executeafterDelete executes the afterDelete triggers
+func (model *SQLModel) executeafterDelete() {
+	for index := 0; index < len(model.afterDelete); index++ {
+		model.afterDelete[index](model.result)
+	}
 }

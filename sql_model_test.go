@@ -149,33 +149,44 @@ func TestReflectResult(t *testing.T) {
 	assert.Equal(1, reflectedStruct.(T).ID)
 	assert.Equal("test", reflectedStruct.(T).Name)
 	assert.Equal(1.2, reflectedStruct.(T).AnotherFloat)
-
 }
 
-/* Need mock
-func TestUpdate(t *testing.T) {
+//Need mock
+// func TestUpdate(t *testing.T) {
 
-	type Bug struct {
-		ID    int    `db:"INTERNAL_ID"`
-		ExtID string `db:"EXTERNAL_ID"`
-	}
+// 	type Bug struct {
+// 		ID    int    `db:"INTERNAL_ID"`
+// 		ExtID string `db:"EXTERNAL_ID"`
+// 	}
 
-	s := []string{
-		"root:root@tcp(127.0.0.1:3306)/taxo",
-	}
+// 	s := []string{
+// 		"root:root@tcp(127.0.0.1:3306)/taxo",
+// 	}
 
-	b := new(Bug)
-	b.ExtID = "aaaaa"
-	b.ID = 5
+// 	b := new(Bug)
+// 	b.ExtID = "aaaaa"
+// 	b.ID = 5
 
-	model, err := NewSQLModel("bugs", s, new(MySQLCnxOpenner))
+// 	model, err := NewSQLModel("bugs", s, new(MySQLCnxOpenner))
 
-	r, err := model.
-		Key("INTERNAL_ID").
-		Update(b)
+// 	model.AfterUpdate(
+// 		[]func([]interface{}){
+// 			func(rows []interface{}) {
 
-	fmt.Println(r)
-	fmt.Println(err)
+// 				for index := 0; index < len(rows); index++ {
+// 					fmt.Println(rows[0])
+// 					rows[0].(*Bug).ExtID = "awdawdawdawdawd"
+// 					fmt.Println(rows[0])
+// 				}
+// 			},
+// 		},
+// 	)
 
-}
-*/
+// 	r, err := model.
+// 		Key("INTERNAL_ID").
+// 		Update(b)
+
+// 	fmt.Println(r)
+// 	fmt.Println(err)
+
+// }
