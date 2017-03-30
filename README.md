@@ -14,6 +14,24 @@ go-sql-wapper is not an orm but, as its name suggests, a sql-wrapper. It allows 
 
 in a type safe, struct directed way. 
 
+The `SQLModel` struct that provide most of the heavy lifting is a _[fluent interface](https://www.wikiwand.com/en/Fluent_interface)_; meaning that call can be linked to each other in order to produce clear and readable code.
+
+```go
+
+func main(){
+    model, err := NewSQLModel("MyTable", []string{"root:root@tcp(127.0.0.1:3306)/mydb", new(MySQLCnxOpenner))
+
+    model.
+    Select("a").
+    SelectAvg("d").
+    Where("a >=", "2").
+    FindAll();
+}
+
+```
+
+Structs are annoted with a `db:""` tag that make the mapping between the database schema and your go struct.
+
 ```go
 type MyStuct struct {
     DbId             int     `db:id`
@@ -22,8 +40,6 @@ type MyStuct struct {
 	ExportedFloat64  float64 `db:"ccc"`
 }
 ```
-
-Structs are annoted with a `db:""` tag that make the mapping between the database schema and your go struct.
 
 ## Insert
 
@@ -124,7 +140,7 @@ should not be so pleasing...
 
 # Where do we Go from there
 
-- [ ] documentation
+- [x] documentation
 - [ ] set of examples
 - [x] Mysql
 - [ ] Oracle
