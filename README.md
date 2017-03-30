@@ -9,6 +9,7 @@ go-sql-wapper is not an orm but, as its name suggests, a sql-wrapper. It allows 
 
 - [insert](#insert)
 - [select](#select)
+- [update](#update)
 - [delete](#delete)
 - update (WIP)
 
@@ -41,7 +42,7 @@ type MyStuct struct {
 }
 ```
 
-## Insert
+### Insert
 
 ```go
 func main() {
@@ -58,7 +59,7 @@ func main() {
 }
 ```
 
-## Select
+### Select
 
 ```go
 func main() {
@@ -73,7 +74,24 @@ func main() {
 }
 ```
 
-## Delete
+### Update
+
+```go
+
+    model, err := NewSQLModel("MyTable", []string{"root:root@tcp(127.0.0.1:3306)/mydb", new(MySQLCnxOpenner))
+
+    result := model.select("aaa, bbb").Find("1")
+    result.(MyStuct).ExportedInted = 3
+
+	r, err := model.
+		Update(b)
+
+	fmt.Println(r) // Prints true
+	fmt.Println(err) // Prints nil
+
+```
+
+### Delete
 ```go
 func main() {
 
