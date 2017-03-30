@@ -179,6 +179,48 @@ func (model *SQLModel) Key(key string) *SQLModel {
 	return model
 }
 
+//CreatedField allow to modify model.createdField
+func (model *SQLModel) CreatedField(createdField string) *SQLModel {
+	model.createdField = createdField
+	return model
+}
+
+//ModifiedField allow to modify model.modifiedField
+func (model *SQLModel) ModifiedField(modifiedField string) *SQLModel {
+	model.modifiedField = modifiedField
+	return model
+}
+
+//DeletedField allow to modify model.deletedField
+func (model *SQLModel) DeletedField(deletedField string) *SQLModel {
+	model.deletedField = deletedField
+	return model
+}
+
+//Created allow to modify model.setCreated
+func (model *SQLModel) Created(created bool) *SQLModel {
+	model.setCreated = created
+	return model
+}
+
+//Modified allow to modify model.setModified
+func (model *SQLModel) Modified(modified bool) *SQLModel {
+	model.setModified = modified
+	return model
+}
+
+//SoftDeletes allow to modify model.softDeletes
+func (model *SQLModel) SoftDeletes(softDeletes bool) *SQLModel {
+	model.softDeletes = softDeletes
+	return model
+}
+
+//DateFormat allow to modify model.dateFormat
+func (model *SQLModel) DateFormat(dateFormat string) *SQLModel {
+	model.dateFormat = dateFormat
+	return model
+}
+
 //Cleans up everything and make the model ready
 //for a new request.
 //It receives and stores the last error if needs be
