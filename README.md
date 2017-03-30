@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/MathieuNls/go-sql-wrapper.png)](https://travis-ci.org/MathieuNls/go-sql-wrapper)
+[![GoDoc](https://godoc.org/github.com/MathieuNls/go-sql-wrapper?status.png)](https://godoc.org/github.comMathieuNls/go-sql-wrapper)
+
 # go-sql-wrapper
 
 go-sql-wapper is not an orm but, as its name suggests, a sql-wrapper. It allows you do to:
