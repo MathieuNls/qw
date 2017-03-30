@@ -40,58 +40,52 @@ func main() {
 Why would you want an SQL wrapper in Go ? Well, don't you like to have enforced types and the additional safety that come with it ? Yes, then, this 
  
 ```go
+stmtOut, err := model.db.Prepare("Select * from myTable")
 
-	stmtOut, err := model.db.Prepare("Select * from myTable")
+if err != nil {
+    panic(err)
+}
+defer stmtOut.Close()
+rows, err := stmtOut.Query()
 
-	if err != nil {
-		panic(err)
-	}
-	defer stmtOut.Close()
-	rows, err := stmtOut.Query()
+columns, err := rows.Columns()
+if err != nil {
+    panic(err)
+}
 
-	columns, err := rows.Columns()
-	if err != nil {
-		panic(err)
-	}
+// Make a slice for the values
+values := make([]sql.RawBytes, len(columns))
 
-	// Make a slice for the values
-	values := make([]sql.RawBytes, len(columns))
+// rows.Scan wants '[]interface{}' as an argument, so we must copy the
+// references into such a slice
+// See http://code.google.com/p/go-wiki/wiki/InterfaceSlice for details
+scanArgs := make([]interface{}, len(values))
+for i := range values {
+    scanArgs[i] = &values[i]
+}
 
-	// rows.Scan wants '[]interface{}' as an argument, so we must copy the
-	// references into such a slice
-	// See http://code.google.com/p/go-wiki/wiki/InterfaceSlice for details
-	scanArgs := make([]interface{}, len(values))
-	for i := range values {
-		scanArgs[i] = &values[i]
-	}
+// Fetch rows
+for rows.Next() {
+    // get RawBytes from data
 
-	// Fetch rows
-	for rows.Next() {
-		// get RawBytes from data
+    err = rows.Scan(scanArgs...)
 
-		err = rows.Scan(scanArgs...)
+    if err != nil {
+        panic(err)
+    }
 
-        if err != nil {
-			panic(err)
-		}
-
-        myInt := scanArgs[0]
-        myString := scanArgs[1]
-        //...
-
-
-
-
-		model.result = append(model.result, model.reflectResult(values, columns))
-	}
+    myInt := scanArgs[0]
+    myString := scanArgs[1]
+    //...
+}
 ```
 
 should not be so pleasing...
 
 # Where do we Go from there
 
-- [] documentation
-- [] set of examples
+- [ ] documentation
+- [ ] set of examples
 - [x] Mysql
-- [] Oracle
-- [] PostgresSQL
+- [ ] Oracle
+- [ ] PostgresSQL
