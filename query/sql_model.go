@@ -1,4 +1,4 @@
-package gosqlwrapper
+package qw
 
 import (
 	"database/sql"
@@ -9,9 +9,9 @@ import (
 	"strings"
 )
 
-//SQLModel represents a SQLModel struct that offers helper function to safely
+//SQLQuery represents a SQLQuery struct that offers helper function to safely
 //interact with the database in go
-type SQLModel struct {
+type SQLQuery struct {
 
 	//The name of the db table this model primarily uses.
 	tableName string
@@ -137,9 +137,9 @@ type SQLModel struct {
 	pendingOrderBy []string
 }
 
-//NewSQLModel returns a pointer to a new SQLModel with all default values setted
-func NewSQLModel(table string, dbCons []string, cnxOpener CnxOpener) (*SQLModel, error) {
-	model := new(SQLModel)
+//NewSQLQuery returns a pointer to a new SQLModel with all default values setted
+func NewSQLQuery(table string, dbCons []string, cnxOpener Cnx) (*SQLQuery, error) {
+	model := new(SQLQuery)
 	model.tableName = table
 	model.key = "id"
 	model.createdField = "created_on"
@@ -172,49 +172,49 @@ func NewSQLModel(table string, dbCons []string, cnxOpener CnxOpener) (*SQLModel,
 }
 
 //Key allow to modify the default id as pk for the table
-func (model *SQLModel) Key(key string) *SQLModel {
+func (model *SQLQuery) Key(key string) *SQLQuery {
 	model.key = key
 	return model
 }
 
 //CreatedField allow to modify model.createdField
-func (model *SQLModel) CreatedField(createdField string) *SQLModel {
+func (model *SQLQuery) CreatedField(createdField string) *SQLQuery {
 	model.createdField = createdField
 	return model
 }
 
 //ModifiedField allow to modify model.modifiedField
-func (model *SQLModel) ModifiedField(modifiedField string) *SQLModel {
+func (model *SQLQuery) ModifiedField(modifiedField string) *SQLQuery {
 	model.modifiedField = modifiedField
 	return model
 }
 
 //DeletedField allow to modify model.deletedField
-func (model *SQLModel) DeletedField(deletedField string) *SQLModel {
+func (model *SQLQuery) DeletedField(deletedField string) *SQLQuery {
 	model.deletedField = deletedField
 	return model
 }
 
 //Created allow to modify model.setCreated
-func (model *SQLModel) Created(created bool) *SQLModel {
+func (model *SQLQuery) Created(created bool) *SQLQuery {
 	model.setCreated = created
 	return model
 }
 
 //Modified allow to modify model.setModified
-func (model *SQLModel) Modified(modified bool) *SQLModel {
+func (model *SQLQuery) Modified(modified bool) *SQLQuery {
 	model.setModified = modified
 	return model
 }
 
 //SoftDeletes allow to modify model.softDeletes
-func (model *SQLModel) SoftDeletes(softDeletes bool) *SQLModel {
+func (model *SQLQuery) SoftDeletes(softDeletes bool) *SQLQuery {
 	model.softDeletes = softDeletes
 	return model
 }
 
 //DateFormat allow to modify model.dateFormat
-func (model *SQLModel) DateFormat(dateFormat string) *SQLModel {
+func (model *SQLQuery) DateFormat(dateFormat string) *SQLQuery {
 	model.dateFormat = dateFormat
 	return model
 }
@@ -222,7 +222,7 @@ func (model *SQLModel) DateFormat(dateFormat string) *SQLModel {
 //Cleans up everything and make the model ready
 //for a new request.
 //It receives and stores the last error if needs be
-func (model *SQLModel) cleanup(err error) {
+func (model *SQLQuery) cleanup(err error) {
 	model.pendingSelects = []string{}
 	model.pendingWheres = []string{}
 	model.pendingJoins = []string{}
@@ -235,7 +235,7 @@ func (model *SQLModel) cleanup(err error) {
 }
 
 // Adapt []sql.RawBytes to the model.result struct using `db` Tag
-func (model *SQLModel) reflectResult(values []sql.RawBytes, columns []string) interface{} {
+func (model *SQLQuery) reflectResult(values []sql.RawBytes, columns []string) interface{} {
 
 	colMap := make(map[string]int)
 
@@ -285,7 +285,7 @@ func (model *SQLModel) reflectResult(values []sql.RawBytes, columns []string) in
 }
 
 // composeSelectString merges all the select clauses together
-func (model *SQLModel) composeSelectString() string {
+func (model *SQLQuery) composeSelectString() string {
 	selectString := "SELECT "
 
 	if len(model.pendingSelects) > 0 {
@@ -331,7 +331,7 @@ func (model *SQLModel) composeSelectString() string {
 }
 
 // executeSelectQuery queries the database
-func (model *SQLModel) executeSelectQuery() error {
+func (model *SQLQuery) executeSelectQuery() error {
 
 	model.executebeforeInsert()
 
@@ -388,7 +388,7 @@ func (model *SQLModel) executeSelectQuery() error {
 }
 
 // Debug prints all the select clauses to the consol
-func (model *SQLModel) Debug() {
+func (model *SQLQuery) Debug() {
 
 	fmt.Println("selects:" + strings.Join(model.pendingSelects, ", "))
 	fmt.Println("wheres:" + strings.Join(model.pendingWheres, " AND "))
@@ -400,86 +400,86 @@ func (model *SQLModel) Debug() {
 // Join add a join clause to the ongoing select
 //model.Join("myOtherTable", "mytable.id = myOtherTable.id", "left")
 //will produce left join myOtherTable on mytable.id = myOtherTable.id
-func (model *SQLModel) Join(table string, condition string, joinType string) *SQLModel {
+func (model *SQLQuery) Join(table string, condition string, joinType string) *SQLQuery {
 	model.pendingJoins = append(model.pendingJoins, joinType+" JOIN "+" "+table+" ON "+condition)
 	return model
 }
 
 // Union adds a union clause
-func (model *SQLModel) Union(selectString string) *SQLModel {
+func (model *SQLQuery) Union(selectString string) *SQLQuery {
 	model.pendingUnions = append(model.pendingUnions, selectString)
 	return model
 }
 
 // OrWhere adds a OrWhere clause
-func (model *SQLModel) OrWhere(field string, value string) *SQLModel {
+func (model *SQLQuery) OrWhere(field string, value string) *SQLQuery {
 	return model.Where(" OR "+field, value)
 }
 
 // WhereIn adds a WhereIn clause
-func (model *SQLModel) WhereIn(field string, values []string) *SQLModel {
+func (model *SQLQuery) WhereIn(field string, values []string) *SQLQuery {
 
 	return model.Where(field+" IN", strings.Join(model.pendingSelects, ", "))
 }
 
 // OrWhereIn adds a OrWhereIn clause
-func (model *SQLModel) OrWhereIn(field string, values []string) *SQLModel {
+func (model *SQLQuery) OrWhereIn(field string, values []string) *SQLQuery {
 
 	return model.Where(" OR "+field+" IN", strings.Join(model.pendingSelects, ", "))
 }
 
 // WhereNotIn adds a WhereNotIn clause
-func (model *SQLModel) WhereNotIn(field string, values []string) *SQLModel {
+func (model *SQLQuery) WhereNotIn(field string, values []string) *SQLQuery {
 
 	return model.Where(field+" NOT IN", strings.Join(model.pendingSelects, ", "))
 }
 
 // OrWhereNotIn adds a OrWhereNotIn clause
-func (model *SQLModel) OrWhereNotIn(field string, values []string) *SQLModel {
+func (model *SQLQuery) OrWhereNotIn(field string, values []string) *SQLQuery {
 
 	return model.Where(" OR "+field+" NOT IN", strings.Join(model.pendingSelects, ", "))
 }
 
 // Like adds a Like clause
-func (model *SQLModel) Like(field string, value string) *SQLModel {
+func (model *SQLQuery) Like(field string, value string) *SQLQuery {
 
 	return model.Where(field+" LIKE", value)
 }
 
 // NotLike adds a NotLike clause
-func (model *SQLModel) NotLike(field string, value string) *SQLModel {
+func (model *SQLQuery) NotLike(field string, value string) *SQLQuery {
 
 	return model.Where(field+" NOT LIKE", value)
 }
 
 // OrLike adds a OrLike clause
-func (model *SQLModel) OrLike(field string, value string) *SQLModel {
+func (model *SQLQuery) OrLike(field string, value string) *SQLQuery {
 
 	return model.Where(" OR "+field+" LIKE", value)
 }
 
 // OrNotLike adds a OrNotLike clause
-func (model *SQLModel) OrNotLike(field string, value string) *SQLModel {
+func (model *SQLQuery) OrNotLike(field string, value string) *SQLQuery {
 
 	return model.Where(" OR "+field+" NOT LIKE", value)
 }
 
 // GroupBy adds a GroupBy clause
-func (model *SQLModel) GroupBy(fields string) *SQLModel {
+func (model *SQLQuery) GroupBy(fields string) *SQLQuery {
 
 	model.pendingGroupBy = append(model.pendingGroupBy, fields)
 	return model
 }
 
 // OrderBy adds a OrderBy clause
-func (model *SQLModel) OrderBy(fields string, order string) *SQLModel {
+func (model *SQLQuery) OrderBy(fields string, order string) *SQLQuery {
 
 	model.pendingOrderBy = append(model.pendingOrderBy, fields+" "+order)
 	return model
 }
 
 // Having adds a Having clause
-func (model *SQLModel) Having(field string, cond string) *SQLModel {
+func (model *SQLQuery) Having(field string, cond string) *SQLQuery {
 
 	concatAnd := func(field string) string {
 		if len(model.pendingHaving) > 0 && !strings.HasPrefix(field, " OR ") {
@@ -493,29 +493,29 @@ func (model *SQLModel) Having(field string, cond string) *SQLModel {
 }
 
 // OrHaving adds a OrHaving clause
-func (model *SQLModel) OrHaving(field string, cond string) *SQLModel {
+func (model *SQLQuery) OrHaving(field string, cond string) *SQLQuery {
 	return model.Having(" OR "+field, cond)
 }
 
 // Limit adds a Limit clause
-func (model *SQLModel) Limit(limit int) *SQLModel {
+func (model *SQLQuery) Limit(limit int) *SQLQuery {
 	model.limit = limit
 	return model
 }
 
 // Offset adds a Offset clause
-func (model *SQLModel) Offset(offset int) *SQLModel {
+func (model *SQLQuery) Offset(offset int) *SQLQuery {
 	model.offset = offset
 	return model
 }
 
 // LastQuery returns the last sql query executed
-func (model *SQLModel) LastQuery() string {
+func (model *SQLQuery) LastQuery() string {
 	return model.lastQuery
 }
 
 // Where adds a Where clause
-func (model *SQLModel) Where(field string, value string) *SQLModel {
+func (model *SQLQuery) Where(field string, value string) *SQLQuery {
 
 	concatAnd := func(field string) string {
 		if len(model.pendingWheres) > 0 && !strings.HasPrefix(field, " OR ") {
@@ -556,38 +556,38 @@ func (model *SQLModel) Where(field string, value string) *SQLModel {
 }
 
 // Select adds a field to the select
-func (model *SQLModel) Select(selectString string) *SQLModel {
+func (model *SQLQuery) Select(selectString string) *SQLQuery {
 
 	model.pendingSelects = append(model.pendingSelects, selectString)
 	return model
 }
 
 // SelectMax adds a SelectMax field to the select
-func (model *SQLModel) SelectMax(selectString string) *SQLModel {
+func (model *SQLQuery) SelectMax(selectString string) *SQLQuery {
 
 	return model.Select("MAX(" + selectString + ")")
 }
 
 // SelectMin adds a SelectMin field to the select
-func (model *SQLModel) SelectMin(selectString string) *SQLModel {
+func (model *SQLQuery) SelectMin(selectString string) *SQLQuery {
 
 	return model.Select("MIN(" + selectString + ")")
 }
 
 // SelectAvg adds a SelectAvg field to the select
-func (model *SQLModel) SelectAvg(selectString string) *SQLModel {
+func (model *SQLQuery) SelectAvg(selectString string) *SQLQuery {
 
 	return model.Select("AVG(" + selectString + ")")
 }
 
 // SelectSum adds a SelectSum field to the select
-func (model *SQLModel) SelectSum(selectString string) *SQLModel {
+func (model *SQLQuery) SelectSum(selectString string) *SQLQuery {
 
 	return model.Select("Sum(" + selectString + ")")
 }
 
 // Find returns the first row with key=id in a struct of ReturnType type
-func (model *SQLModel) Find(id string) (interface{}, error) {
+func (model *SQLQuery) Find(id string) (interface{}, error) {
 
 	err := model.
 		Limit(1).
@@ -598,7 +598,7 @@ func (model *SQLModel) Find(id string) (interface{}, error) {
 }
 
 // FindAll returns all the row matching the query in an array of ReturnType type
-func (model *SQLModel) FindAll() ([]interface{}, error) {
+func (model *SQLQuery) FindAll() ([]interface{}, error) {
 
 	err := model.
 		executeSelectQuery()
@@ -607,7 +607,7 @@ func (model *SQLModel) FindAll() ([]interface{}, error) {
 }
 
 // FindAllBy returns all the row matching the fields in an array of ReturnType type
-func (model *SQLModel) FindAllBy(fields map[string]string) ([]interface{}, error) {
+func (model *SQLQuery) FindAllBy(fields map[string]string) ([]interface{}, error) {
 
 	for k, v := range fields {
 		model.Where(k, v)
@@ -620,13 +620,13 @@ func (model *SQLModel) FindAllBy(fields map[string]string) ([]interface{}, error
 }
 
 // FindBy returns all the first row matching the on ongoing select in a ReturnType struct
-func (model *SQLModel) FindBy(field string, value string) (interface{}, error) {
+func (model *SQLQuery) FindBy(field string, value string) (interface{}, error) {
 	err := model.Where(field, value).executeSelectQuery()
 	return model.result[0], err
 }
 
 // CountAll returns the number of rows in the table
-func (model *SQLModel) CountAll() (int, error) {
+func (model *SQLQuery) CountAll() (int, error) {
 
 	e := ""
 	model.pendingSelects = []string{}
@@ -639,7 +639,7 @@ func (model *SQLModel) CountAll() (int, error) {
 }
 
 // CountBy returns the number of rows in the table with field = value
-func (model *SQLModel) CountBy(field string, value string) (int, error) {
+func (model *SQLQuery) CountBy(field string, value string) (int, error) {
 
 	return model.
 		Where(field, value).
@@ -647,7 +647,7 @@ func (model *SQLModel) CountBy(field string, value string) (int, error) {
 }
 
 // IsUnique returns if field=value is unique in the db
-func (model *SQLModel) IsUnique(field string, value string) (bool, error) {
+func (model *SQLQuery) IsUnique(field string, value string) (bool, error) {
 	count, err := model.
 		Where(field, value).
 		CountAll()
@@ -660,7 +660,7 @@ func (model *SQLModel) IsUnique(field string, value string) (bool, error) {
 }
 
 // Insert insert a struct to the db
-func (model *SQLModel) Insert(data interface{}) (bool, error) {
+func (model *SQLQuery) Insert(data interface{}) (bool, error) {
 
 	model.result = []interface{}{data}
 	model.executebeforeInsert()
@@ -714,7 +714,7 @@ func (model *SQLModel) Insert(data interface{}) (bool, error) {
 }
 
 // Delete deletes a struct from the db based on key
-func (model *SQLModel) Delete(data interface{}) (bool, error) {
+func (model *SQLQuery) Delete(data interface{}) (bool, error) {
 
 	model.result = []interface{}{data}
 	model.executebeforeDelete()
@@ -766,7 +766,7 @@ func (model *SQLModel) Delete(data interface{}) (bool, error) {
 }
 
 //Update sync the data struct with the db according to its model.key field
-func (model *SQLModel) Update(data interface{}) (bool, error) {
+func (model *SQLQuery) Update(data interface{}) (bool, error) {
 
 	model.result = []interface{}{data}
 	model.executebeforeUpdate()
@@ -814,104 +814,104 @@ func (model *SQLModel) Update(data interface{}) (bool, error) {
 }
 
 //BeforeInsert sets the BeforeInsert triggers
-func (model *SQLModel) BeforeInsert(triggers []func([]interface{})) *SQLModel {
+func (model *SQLQuery) BeforeInsert(triggers []func([]interface{})) *SQLQuery {
 	model.beforeInsert = triggers
 	return model
 }
 
 //AfterInsert sets the AfterInsert triggers
-func (model *SQLModel) AfterInsert(triggers []func([]interface{})) *SQLModel {
+func (model *SQLQuery) AfterInsert(triggers []func([]interface{})) *SQLQuery {
 	model.afterInsert = triggers
 	return model
 }
 
 //BeforeUpdate sets the BeforeUpdate triggers
-func (model *SQLModel) BeforeUpdate(triggers []func([]interface{})) *SQLModel {
+func (model *SQLQuery) BeforeUpdate(triggers []func([]interface{})) *SQLQuery {
 	model.beforeUpdate = triggers
 	return model
 }
 
 //AfterUpdate sets the AfterUpdate triggers
-func (model *SQLModel) AfterUpdate(triggers []func([]interface{})) *SQLModel {
+func (model *SQLQuery) AfterUpdate(triggers []func([]interface{})) *SQLQuery {
 	model.afterUpdate = triggers
 	return model
 }
 
 //BeforeFind sets the BeforeFind triggers
-func (model *SQLModel) BeforeFind(triggers []func([]interface{})) *SQLModel {
+func (model *SQLQuery) BeforeFind(triggers []func([]interface{})) *SQLQuery {
 	model.beforeFind = triggers
 	return model
 }
 
 //AfterFind sets the AfterFind triggers
-func (model *SQLModel) AfterFind(triggers []func([]interface{})) *SQLModel {
+func (model *SQLQuery) AfterFind(triggers []func([]interface{})) *SQLQuery {
 	model.afterFind = triggers
 	return model
 }
 
 //BeforeDelete sets the BeforeDelete triggers
-func (model *SQLModel) BeforeDelete(triggers []func([]interface{})) *SQLModel {
+func (model *SQLQuery) BeforeDelete(triggers []func([]interface{})) *SQLQuery {
 	model.beforeDelete = triggers
 	return model
 }
 
 //AfterDelete sets the AfterDelete triggers
-func (model *SQLModel) AfterDelete(triggers []func([]interface{})) *SQLModel {
+func (model *SQLQuery) AfterDelete(triggers []func([]interface{})) *SQLQuery {
 	model.afterDelete = triggers
 	return model
 }
 
 //executebeforeInsert executes the beforeInsert triggers
-func (model *SQLModel) executebeforeInsert() {
+func (model *SQLQuery) executebeforeInsert() {
 	for index := 0; index < len(model.beforeInsert); index++ {
 		model.beforeInsert[index](model.result)
 	}
 }
 
 //executeafterInsert executes the afterInsert triggers
-func (model *SQLModel) executeafterInsert() {
+func (model *SQLQuery) executeafterInsert() {
 	for index := 0; index < len(model.afterInsert); index++ {
 		model.afterInsert[index](model.result)
 	}
 }
 
 //executebeforeUpdate executes the beforeUpdate triggers
-func (model *SQLModel) executebeforeUpdate() {
+func (model *SQLQuery) executebeforeUpdate() {
 	for index := 0; index < len(model.beforeUpdate); index++ {
 		model.beforeUpdate[index](model.result)
 	}
 }
 
 //executeafterUpdate executes the afterUpdate triggers
-func (model *SQLModel) executeafterUpdate() {
+func (model *SQLQuery) executeafterUpdate() {
 	for index := 0; index < len(model.afterUpdate); index++ {
 		model.afterUpdate[index](model.result)
 	}
 }
 
 //executebeforeFind executes the beforeFind triggers
-func (model *SQLModel) executebeforeFind() {
+func (model *SQLQuery) executebeforeFind() {
 	for index := 0; index < len(model.beforeFind); index++ {
 		model.beforeFind[index](model.result)
 	}
 }
 
 //executeafterFind executes the afterFind triggers
-func (model *SQLModel) executeafterFind() {
+func (model *SQLQuery) executeafterFind() {
 	for index := 0; index < len(model.afterFind); index++ {
 		model.afterFind[index](model.result)
 	}
 }
 
 //executebeforeDelete executes the beforeDelete triggers
-func (model *SQLModel) executebeforeDelete() {
+func (model *SQLQuery) executebeforeDelete() {
 	for index := 0; index < len(model.beforeDelete); index++ {
 		model.beforeDelete[index](model.result)
 	}
 }
 
 //executeafterDelete executes the afterDelete triggers
-func (model *SQLModel) executeafterDelete() {
+func (model *SQLQuery) executeafterDelete() {
 	for index := 0; index < len(model.afterDelete); index++ {
 		model.afterDelete[index](model.result)
 	}

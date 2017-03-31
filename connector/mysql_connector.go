@@ -1,4 +1,4 @@
-package gosqlwrapper
+package qw
 
 import (
 	"database/sql"
@@ -7,20 +7,14 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-//CnxOpener defines the requiered method for each
-//cnx drivers
-type CnxOpener interface {
-	OpenCnx([]string) (*sql.DB, error)
-}
-
-//MySQLCnxOpenner is CnxOpener for MySql
-type MySQLCnxOpenner struct {
+//MySQLCnx is CnxOpener for MySql
+type MySQLCnx struct {
 }
 
 //OpenCnx opens a connection to a MySQL server.
 //It iterates over dbCons until it can open a
 //connection.
-func (CnxOpener MySQLCnxOpenner) OpenCnx(dbCons []string) (*sql.DB, error) {
+func (CnxOpener MySQLCnx) OpenCnx(dbCons []string) (*sql.DB, error) {
 
 	var db *sql.DB
 	var err error

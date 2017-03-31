@@ -186,5 +186,6 @@ should not be so pleasing...
 - [x] documentation
 - [ ] set of examples
 - [x] Mysql
+- [ ] Solr
 - [ ] Oracle
 - [ ] PostgresSQL
