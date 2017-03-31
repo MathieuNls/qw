@@ -1,4 +1,4 @@
-package qw
+package query
 
 import (
 	"database/sql"
@@ -7,6 +7,8 @@ import (
 	"strconv"
 
 	"strings"
+
+	"github.com/mathieunls/qw/connector"
 )
 
 //SQLQuery represents a SQLQuery struct that offers helper function to safely
@@ -138,7 +140,7 @@ type SQLQuery struct {
 }
 
 //NewSQLQuery returns a pointer to a new SQLModel with all default values setted
-func NewSQLQuery(table string, dbCons []string, cnxOpener Cnx) (*SQLQuery, error) {
+func NewSQLQuery(table string, dbCons []string, cnxOpener connector.Cnx) (*SQLQuery, error) {
 	model := new(SQLQuery)
 	model.tableName = table
 	model.key = "id"
@@ -160,7 +162,6 @@ func NewSQLQuery(table string, dbCons []string, cnxOpener Cnx) (*SQLQuery, error
 	model.offset = -1
 
 	var err error
-
 	model.db, err = cnxOpener.OpenCnx(dbCons)
 
 	if err != nil {

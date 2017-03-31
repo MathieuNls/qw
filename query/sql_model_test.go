@@ -1,4 +1,4 @@
-package qw
+package query
 
 import (
 	"database/sql"

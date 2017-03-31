@@ -1,4 +1,4 @@
-package qw
+package connector
 
 import (
 	"database/sql"
