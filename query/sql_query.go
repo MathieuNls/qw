@@ -90,14 +90,6 @@ type SQLQuery struct {
 	afterDelete  []func([]interface{})
 
 	/**
-	 * By default, we return items as objects. You can change this for the
-	 * entire class by setting this value to 'array' instead of 'object'.
-	 * Alternatively, you can do it on a per-instance basis using the
-	 * 'as_array()' and 'as_object()' methods.
-	 */
-	returnType interface{}
-
-	/**
 	 * Holds the return type temporarily when using the
 	 * as_map() methods
 	 */

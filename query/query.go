@@ -162,105 +162,115 @@ func (model *query) DateFormat(dateFormat string) *query {
 }
 
 //BeforeInsert sets the BeforeInsert triggers
-func (model *SQLQuery) BeforeInsert(triggers []func([]interface{})) *SQLQuery {
+func (model *query) BeforeInsert(triggers []func([]interface{})) *query {
 	model.beforeInsert = triggers
 	return model
 }
 
 //AfterInsert sets the AfterInsert triggers
-func (model *SQLQuery) AfterInsert(triggers []func([]interface{})) *SQLQuery {
+func (model *query) AfterInsert(triggers []func([]interface{})) *query {
 	model.afterInsert = triggers
 	return model
 }
 
 //BeforeUpdate sets the BeforeUpdate triggers
-func (model *SQLQuery) BeforeUpdate(triggers []func([]interface{})) *SQLQuery {
+func (model *query) BeforeUpdate(triggers []func([]interface{})) *query {
 	model.beforeUpdate = triggers
 	return model
 }
 
 //AfterUpdate sets the AfterUpdate triggers
-func (model *SQLQuery) AfterUpdate(triggers []func([]interface{})) *SQLQuery {
+func (model *query) AfterUpdate(triggers []func([]interface{})) *query {
 	model.afterUpdate = triggers
 	return model
 }
 
 //BeforeFind sets the BeforeFind triggers
-func (model *SQLQuery) BeforeFind(triggers []func([]interface{})) *SQLQuery {
+func (model *query) BeforeFind(triggers []func([]interface{})) *query {
 	model.beforeFind = triggers
 	return model
 }
 
 //AfterFind sets the AfterFind triggers
-func (model *SQLQuery) AfterFind(triggers []func([]interface{})) *SQLQuery {
+func (model *query) AfterFind(triggers []func([]interface{})) *query {
 	model.afterFind = triggers
 	return model
 }
 
 //BeforeDelete sets the BeforeDelete triggers
-func (model *SQLQuery) BeforeDelete(triggers []func([]interface{})) *SQLQuery {
+func (model *query) BeforeDelete(triggers []func([]interface{})) *query {
 	model.beforeDelete = triggers
 	return model
 }
 
 //AfterDelete sets the AfterDelete triggers
-func (model *SQLQuery) AfterDelete(triggers []func([]interface{})) *SQLQuery {
+func (model *query) AfterDelete(triggers []func([]interface{})) *query {
 	model.afterDelete = triggers
 	return model
 }
 
 //executebeforeInsert executes the beforeInsert triggers
-func (model *SQLQuery) executebeforeInsert() {
+func (model *query) executebeforeInsert() {
 	for index := 0; index < len(model.beforeInsert); index++ {
 		model.beforeInsert[index](model.result)
 	}
 }
 
 //executeafterInsert executes the afterInsert triggers
-func (model *SQLQuery) executeafterInsert() {
+func (model *query) executeafterInsert() {
 	for index := 0; index < len(model.afterInsert); index++ {
 		model.afterInsert[index](model.result)
 	}
 }
 
 //executebeforeUpdate executes the beforeUpdate triggers
-func (model *SQLQuery) executebeforeUpdate() {
+func (model *query) executebeforeUpdate() {
 	for index := 0; index < len(model.beforeUpdate); index++ {
 		model.beforeUpdate[index](model.result)
 	}
 }
 
 //executeafterUpdate executes the afterUpdate triggers
-func (model *SQLQuery) executeafterUpdate() {
+func (model *query) executeafterUpdate() {
 	for index := 0; index < len(model.afterUpdate); index++ {
 		model.afterUpdate[index](model.result)
 	}
 }
 
 //executebeforeFind executes the beforeFind triggers
-func (model *SQLQuery) executebeforeFind() {
+func (model *query) executebeforeFind() {
 	for index := 0; index < len(model.beforeFind); index++ {
 		model.beforeFind[index](model.result)
 	}
 }
 
 //executeafterFind executes the afterFind triggers
-func (model *SQLQuery) executeafterFind() {
+func (model *query) executeafterFind() {
 	for index := 0; index < len(model.afterFind); index++ {
 		model.afterFind[index](model.result)
 	}
 }
 
 //executebeforeDelete executes the beforeDelete triggers
-func (model *SQLQuery) executebeforeDelete() {
+func (model *query) executebeforeDelete() {
 	for index := 0; index < len(model.beforeDelete); index++ {
 		model.beforeDelete[index](model.result)
 	}
 }
 
 //executeafterDelete executes the afterDelete triggers
-func (model *SQLQuery) executeafterDelete() {
+func (model *query) executeafterDelete() {
 	for index := 0; index < len(model.afterDelete); index++ {
 		model.afterDelete[index](model.result)
 	}
+}
+
+//LastQuery returns the LastQuery
+func (model *query) LastQuery() string {
+	return model.lastQuery
+}
+
+func (model *query) ReturnType(returnType interface{}) *query {
+	model.returnType = returnType
+	return model
 }
