@@ -14,6 +14,7 @@ import (
 //SQLQuery represents a SQLQuery struct that offers helper function to safely
 //interact with the database in go
 type SQLQuery struct {
+	query
 
 	//The name of the db table this model primarily uses.
 	tableName string
@@ -170,54 +171,6 @@ func NewSQLQuery(table string, dbCons []string, cnxOpener connector.Cnx) (*SQLQu
 
 	return model, nil
 
-}
-
-//Key allow to modify the default id as pk for the table
-func (model *SQLQuery) Key(key string) *SQLQuery {
-	model.key = key
-	return model
-}
-
-//CreatedField allow to modify model.createdField
-func (model *SQLQuery) CreatedField(createdField string) *SQLQuery {
-	model.createdField = createdField
-	return model
-}
-
-//ModifiedField allow to modify model.modifiedField
-func (model *SQLQuery) ModifiedField(modifiedField string) *SQLQuery {
-	model.modifiedField = modifiedField
-	return model
-}
-
-//DeletedField allow to modify model.deletedField
-func (model *SQLQuery) DeletedField(deletedField string) *SQLQuery {
-	model.deletedField = deletedField
-	return model
-}
-
-//Created allow to modify model.setCreated
-func (model *SQLQuery) Created(created bool) *SQLQuery {
-	model.setCreated = created
-	return model
-}
-
-//Modified allow to modify model.setModified
-func (model *SQLQuery) Modified(modified bool) *SQLQuery {
-	model.setModified = modified
-	return model
-}
-
-//SoftDeletes allow to modify model.softDeletes
-func (model *SQLQuery) SoftDeletes(softDeletes bool) *SQLQuery {
-	model.softDeletes = softDeletes
-	return model
-}
-
-//DateFormat allow to modify model.dateFormat
-func (model *SQLQuery) DateFormat(dateFormat string) *SQLQuery {
-	model.dateFormat = dateFormat
-	return model
 }
 
 //Cleans up everything and make the model ready
@@ -812,108 +765,4 @@ func (model *SQLQuery) Update(data interface{}) (bool, error) {
 	model.executeafterUpdate()
 
 	return affectedRows == 1, nil
-}
-
-//BeforeInsert sets the BeforeInsert triggers
-func (model *SQLQuery) BeforeInsert(triggers []func([]interface{})) *SQLQuery {
-	model.beforeInsert = triggers
-	return model
-}
-
-//AfterInsert sets the AfterInsert triggers
-func (model *SQLQuery) AfterInsert(triggers []func([]interface{})) *SQLQuery {
-	model.afterInsert = triggers
-	return model
-}
-
-//BeforeUpdate sets the BeforeUpdate triggers
-func (model *SQLQuery) BeforeUpdate(triggers []func([]interface{})) *SQLQuery {
-	model.beforeUpdate = triggers
-	return model
-}
-
-//AfterUpdate sets the AfterUpdate triggers
-func (model *SQLQuery) AfterUpdate(triggers []func([]interface{})) *SQLQuery {
-	model.afterUpdate = triggers
-	return model
-}
-
-//BeforeFind sets the BeforeFind triggers
-func (model *SQLQuery) BeforeFind(triggers []func([]interface{})) *SQLQuery {
-	model.beforeFind = triggers
-	return model
-}
-
-//AfterFind sets the AfterFind triggers
-func (model *SQLQuery) AfterFind(triggers []func([]interface{})) *SQLQuery {
-	model.afterFind = triggers
-	return model
-}
-
-//BeforeDelete sets the BeforeDelete triggers
-func (model *SQLQuery) BeforeDelete(triggers []func([]interface{})) *SQLQuery {
-	model.beforeDelete = triggers
-	return model
-}
-
-//AfterDelete sets the AfterDelete triggers
-func (model *SQLQuery) AfterDelete(triggers []func([]interface{})) *SQLQuery {
-	model.afterDelete = triggers
-	return model
-}
-
-//executebeforeInsert executes the beforeInsert triggers
-func (model *SQLQuery) executebeforeInsert() {
-	for index := 0; index < len(model.beforeInsert); index++ {
-		model.beforeInsert[index](model.result)
-	}
-}
-
-//executeafterInsert executes the afterInsert triggers
-func (model *SQLQuery) executeafterInsert() {
-	for index := 0; index < len(model.afterInsert); index++ {
-		model.afterInsert[index](model.result)
-	}
-}
-
-//executebeforeUpdate executes the beforeUpdate triggers
-func (model *SQLQuery) executebeforeUpdate() {
-	for index := 0; index < len(model.beforeUpdate); index++ {
-		model.beforeUpdate[index](model.result)
-	}
-}
-
-//executeafterUpdate executes the afterUpdate triggers
-func (model *SQLQuery) executeafterUpdate() {
-	for index := 0; index < len(model.afterUpdate); index++ {
-		model.afterUpdate[index](model.result)
-	}
-}
-
-//executebeforeFind executes the beforeFind triggers
-func (model *SQLQuery) executebeforeFind() {
-	for index := 0; index < len(model.beforeFind); index++ {
-		model.beforeFind[index](model.result)
-	}
-}
-
-//executeafterFind executes the afterFind triggers
-func (model *SQLQuery) executeafterFind() {
-	for index := 0; index < len(model.afterFind); index++ {
-		model.afterFind[index](model.result)
-	}
-}
-
-//executebeforeDelete executes the beforeDelete triggers
-func (model *SQLQuery) executebeforeDelete() {
-	for index := 0; index < len(model.beforeDelete); index++ {
-		model.beforeDelete[index](model.result)
-	}
-}
-
-//executeafterDelete executes the afterDelete triggers
-func (model *SQLQuery) executeafterDelete() {
-	for index := 0; index < len(model.afterDelete); index++ {
-		model.afterDelete[index](model.result)
-	}
 }
